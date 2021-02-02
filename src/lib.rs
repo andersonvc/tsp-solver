@@ -1,7 +1,9 @@
 pub mod utils;
+pub mod solver;
 
 use wasm_bindgen::prelude::*;
-use std::collections::{HashMap};
+
+
 extern crate js_sys;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
@@ -12,78 +14,72 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 
 #[wasm_bindgen]
-#[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum SearchType {
-    Random = 0,
-    Greedy = 1,
-}
-
-
-#[wasm_bindgen]
-pub struct World {
-    node_cnt: u8,
-    nodes: Vec<(u8,u8)>,
-    distmap: HashMap<(u8,u8),f32>,
-    search_type: SearchType,
-    path: Vec<u8>,
-    dist: f32,
+pub struct Controller {
+    nodes: Vec<(u32,u32)>,
+    _solver: solver::Solver,
+    solver_type: u8,
+    best_route: Vec<u32>,
+    best_dist: f32,
+    iteration_cnt: u32,
+    route_hist:Vec<(u32,f32)>,
 }
 
 #[wasm_bindgen]
-impl World{
+impl Controller {
+    pub fn new(node_cnt:u32,solver_type:u8)->Controller{
+        let nodes = utils::create_random_nodes(node_cnt);
+        let dist_map = utils::compute_dist_hashmap(&nodes);
+        let best_route:Vec<u32> = utils::compute_random_path(node_cnt);
+        let best_dist:f32 = utils::compute_circuit_dist(&dist_map, &best_route);
+        let iteration_cnt:u32 = 0;
+        let route_hist:Vec<(u32,f32)> = vec![(iteration_cnt,best_dist)];
 
-    pub fn new(node_cnt:u8,search_type:SearchType) -> World{
+        let solver = solver::Solver::new(node_cnt,dist_map);
+        
 
-        let nodes = (0..node_cnt).map(|_| ((js_sys::Math::random()*100.0) as u8,(js_sys::Math::random()*100.0) as u8)).collect();
-        let path = utils::compute_random_path(&nodes);
-        let dist=utils::compute_circuit_dist(&nodes,&path);
-        let distmap = utils::compute_dist_hashmap(&nodes);
-        let search_type = search_type;
-        World {
-            node_cnt,
+        Controller {
             nodes,
-            distmap,
-            search_type,
-            path,
-            dist,
+            _solver:solver,
+            solver_type,
+            best_route,
+            best_dist,
+            iteration_cnt,
+            route_hist,
         }
     }
 
-
-    pub fn node_cnt(&self) -> u8 {
-        self.node_cnt
+    pub fn update(&mut self){
+        self.iteration_cnt+=1;
+        let curr_best = match self.solver_type{
+            0 => self._solver.ant_colony_update(),
+            1 => self._solver.greedy_update(),
+            2 => self._solver.random_update(),
+            _ => self._solver.random_update(),
+        };
+        
+        if curr_best<self.best_dist{
+            self.best_dist=curr_best;
+            self.best_route=self._solver.route.clone();
+            self.route_hist.push((self.iteration_cnt,self.best_dist))
+        }
     }
 
-    pub fn dist(&self) -> f32 {
-        self.dist
-    }
-
-    pub fn path(&self) -> *const u8 {
-        self.path.as_ptr()
-    }
-
-    pub fn nodes(&self)-> *const (u8,u8) {
+    pub fn get_nodes(&self)->*const (u32,u32){
         self.nodes.as_ptr()
     }
 
-
-    pub fn update_path(&mut self){
-        //let curr_path;
-        let curr_path = match &self.search_type {
-            SearchType::Random => utils::compute_random_path(&self.nodes),
-            SearchType::Greedy => utils::compute_greedy_path(&self.distmap, self.node_cnt)
-        };
-
-        let curr_dist:f32 = utils::compute_circuit_dist(&self.nodes,&curr_path);
-
-        if curr_dist<self.dist {
-            self.dist = curr_dist;
-            self.path.copy_from_slice(&curr_path);
-        }
+    pub fn get_route(&self)->*const u32{
+        self.best_route.as_ptr()
     }
+
+    pub fn get_best_dist(&self)-> f32{
+        self.best_dist
+    }
+
+    pub fn get_solver_type(&self)->u8{
+        self.solver_type
+    }
+    
+
 }
-
-
-
 
