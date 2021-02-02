@@ -1,6 +1,77 @@
 extern crate tsp_solver;
-use tsp_solver::utils::*;
 
+use std::collections::{HashMap};
+use wasm_bindgen_test::*;
+use tsp_solver::utils;
+
+
+#[wasm_bindgen_test]
+fn test_get_aco_selection_likelihood(){
+    let mut nodes:Vec<u32> = vec![1,2,3];
+    let pher_weights:Vec<f32> = vec![1.,2.,3.];
+    let dist_weights:Vec<f32> = vec![1.,2.,3.];
+
+    let alpha:f32 = 1.0;
+    let beta:f32 = 1.0;
+
+    let res = utils::get_aco_selection_likelihood(&pher_weights, &dist_weights, alpha, beta);
+
+    assert_eq!(res,vec![0.071428575,0.35714287,1.0]);
+
+    let sel = utils::pick_probabilistic_node(&res, &mut nodes);
+
+    assert_eq!(nodes.len(),2);
+    for rec in nodes.iter(){
+        assert_ne!(*rec,sel);
+    }
+
+}
+
+
+#[wasm_bindgen_test]
+fn test_distance_likelihood(){
+    let mut dist_map = HashMap::<(u32,u32),f32>::new();
+    dist_map.insert((0,1),1.0);
+    dist_map.insert((1,2),2.0);
+    dist_map.insert((0,2),3.0);
+    dist_map.insert((0,3),4.0);
+
+    let curr_node:u32 = 0;
+    let rem_nodes:Vec<u32> = vec![1,2,3];
+
+    let res  = utils::get_distance_likelihood(&dist_map,&curr_node,&rem_nodes);
+    assert_eq!(res,[1.0,0.33333334,0.25]);
+    let res  = utils::get_distance_likelihood(&dist_map,&curr_node,&rem_nodes);
+    assert_eq!(res,[1.0,0.33333334,0.25]);
+
+}
+
+
+#[wasm_bindgen_test]
+fn test_circuit_dist(){
+    let mut dist_map = HashMap::<(u32,u32),f32>::new();
+    dist_map.insert((0,1),1.0);
+    dist_map.insert((1,2),2.0);
+    dist_map.insert((0,2),3.0);
+
+    let path:Vec<u32> = vec![0,1,2];
+    let circuit_dist = utils::compute_circuit_dist(&dist_map,&path);
+    assert_eq!(circuit_dist,6.0)
+}
+
+#[wasm_bindgen_test]
+fn test_pick_random_node(){
+    let mut v:&mut Vec<u32> = &mut vec![0,1,2,3];
+    let selected:u32 = utils::pick_random_node(&mut v);
+
+    assert_eq!(v.len(),3);
+    for rec in v.iter(){
+        assert_ne!(*rec,selected);
+    }
+
+}
+
+/*
 
 #[test]
 fn test_circuit_dist(){
@@ -63,3 +134,4 @@ fn test_blah(){
     assert_eq!(1,1);
     assert_eq!(greedy_path,vec![0,1,2]);
 }
+*/

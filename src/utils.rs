@@ -1,55 +1,106 @@
 use std::collections::{HashMap,HashSet};
+use std::cmp::{min,max};
+
+extern crate js_sys;
 
 
-pub fn compute_dist(pt1:(u8,u8),pt2:(u8,u8))->f32{
-    let (x1,y1) = pt1;
-    let (x2,y2) = pt2;
-    (x1 as f32 - x2 as f32).powf(2.)+(y1 as f32 - y2 as f32).powf(2.)
+pub fn get_aco_selection_likelihood(pher_weights:&Vec<f32>,dist_weights:&Vec<f32>,alpha:f32,beta:f32)->Vec<f32>{
+
+    let gamma:Vec<f32> = pher_weights.iter().map(|x|x.powf(alpha)).collect();
+    let nu:Vec<f32> = dist_weights.iter().map(|x| x.powf(beta)).collect();
+
+    let weights:Vec<f32> = gamma.iter().zip(nu.iter()).map(|(gamma,nu)| gamma*nu).collect();
+    let den:f32 = (weights.iter().sum::<f32>()).max(std::f32::MIN_POSITIVE);
+
+    let cum_distribution:Vec<f32> = weights.iter().scan(0.0,|acc, &x|{*acc=*acc+x/den;Some(*acc)}).collect();
+    cum_distribution
+
 }
 
-pub fn compute_circuit_dist(nodes:&Vec<(u8,u8)>, path:&Vec<u8>) -> f32 {
-    let mut curr_dist:f32 = 0.0;
-    for v in 1..path.len() {
-        
-        let a = path[v-1] as usize;
-        let b = path[v] as usize;
-
-        let (prev_x,prev_y) = nodes[a];
-        let (curr_x,curr_y) = nodes[b];
-
-        curr_dist+=(curr_y as f32 -prev_y as f32).powf(2.)+(curr_x as f32 - prev_x as f32).powf(2.);
-    };
-
-    let a = path[path.len()-1] as usize;
-    let b = path[0] as usize;
-
-    let (prev_x,prev_y) = nodes[a];
-    let (curr_x,curr_y) = nodes[b];
-
-    curr_dist+=(curr_y as f32 - prev_y as f32).powf(2.)+(curr_x as f32 - prev_x as f32).powf(2.);
-    curr_dist
+pub fn get_pheremone_likelihood(pher_map:&HashMap<(u32,u32),f32>, curr_node:&u32, valid_nodes:&Vec<u32>)->Vec<f32>{
+    let weights = valid_nodes.into_iter().map(|x| *pher_map.get(&(min(*x,*curr_node),max(*x,*curr_node))).unwrap()).collect();
+    return weights
 }
 
-pub fn compute_dist_hashmap(nodes:&Vec<(u8,u8)>)->HashMap<(u8,u8),f32>{
-    let mut dist_map = HashMap::with_capacity(nodes.len()*(nodes.len()-1)/2);
+pub fn get_distance_likelihood(dist_map:&HashMap<(u32,u32),f32>, curr_node:&u32, valid_nodes:&Vec<u32>)->Vec<f32>{
+    let weights = valid_nodes.into_iter().map(|x| 1.0 / *dist_map.get(&(min(*x,*curr_node),max(*x,*curr_node))).unwrap()).collect();
+    return weights
+}
+
+
+pub fn pick_probabilistic_node(cum_distrib:&Vec<f32>, nodes:&mut Vec<u32>)->u32{
+    let rand_val = js_sys::Math::random() as f32;
+    let mut target_ix:usize = 0;
+
     for i in 0..nodes.len(){
-        for j in i+1..nodes.len(){
-            dist_map.insert((i as u8,j as u8),compute_dist(nodes[i], nodes[j]));
+        if rand_val<=cum_distrib[i]{
+            target_ix=i;
+            break;
         }
     }
+    nodes.swap_remove(target_ix as usize)
+}
+
+pub fn pick_random_node(nodes:&mut Vec<u32>)->u32{
+    let rand_ix = js_sys::Math::floor(js_sys::Math::random()*(nodes.len() as f64)) as u32;
+    nodes.swap_remove(rand_ix as usize)
+}
+
+pub fn compute_dist(pt1:(u32,u32),pt2:(u32,u32))->f32{
+    let (x1,y1) = pt1;
+    let (x2,y2) = pt2;
+    ((x1 as f32 - x2 as f32).powf(2.)+(y1 as f32 - y2 as f32).powf(2.)).powf(0.5)
+}
+
+pub fn compute_circuit_dist(dist_map:&HashMap<(u32,u32),f32>, path:&Vec<u32>) -> f32 {
+
+    let mut curr_dist:f32 = 0.0;
+    for v in 1..path.len() {
+        let n1 = std::cmp::min(path[v-1],path[v]);
+        let n2 = std::cmp::max(path[v-1],path[v]);
+
+        curr_dist+=*dist_map.get(&(n1,n2)).unwrap();
+    };
+    let n1 = std::cmp::min(path[0],path[path.len()-1]);
+    let n2 = std::cmp::max(path[0],path[path.len()-1]);
+
+    curr_dist+=*dist_map.get(&(n1,n2)).unwrap();
+    curr_dist
+    
+}
+
+pub fn create_random_nodes(node_cnt:u32)->Vec<(u32,u32)>{
+    //Create random nodes (x,y) using the javascript random number generator
+    //Vector should be immutable
+    let nodes = (0..node_cnt).map(|_| ((js_sys::Math::random()*100.0) as u32,(js_sys::Math::random()*100.0) as u32)).collect();
+    nodes
+}
+
+pub fn compute_dist_hashmap(nodes:&Vec<(u32,u32)>)->HashMap<(u32,u32),f32>{
+    
+    //Generate each node->node edge, with lower edge_id preceding
+    let mut edge_ix:Vec<(u32,u32)> = Vec::new();
+    for i in 0..nodes.len() as u32 {
+      for j in i+1..nodes.len() as u32 {
+          edge_ix.insert(0,(i,j));
+      }
+    }
+
+    // edge1->edge2: point distance
+    let dist_map:HashMap<(u32,u32),f32> = edge_ix.iter().map(|x| (*x,compute_dist(nodes[x.0 as usize],nodes[x.1 as usize]))).collect();
 
     dist_map
 }
 
-pub fn compute_random_path(nodes:&Vec<(u8,u8)>)-> Vec<u8> {
+pub fn compute_random_path(node_cnt:u32)-> Vec<u32> {
     //Fisher Yates shuffle
-    let mut rand_path: Vec<u8> = Vec::<u8>::with_capacity(nodes.len());
+    let mut rand_path: Vec<u32> = Vec::<u32>::with_capacity(node_cnt as usize);
 
-    for i in 0..nodes.len(){rand_path.push(i as u8);}
+    for i in 0..node_cnt{rand_path.push(i as u32);}
 
-    for i in 0..rand_path.len()-1 {
-        let j = js_sys::Math::floor(js_sys::Math::random()*(((rand_path.len()-i) as f64 ) + (i as f64)) ) as usize;
-        rand_path.swap(i,j);
+    for i in 0..node_cnt-1 {
+        let j = js_sys::Math::floor(js_sys::Math::random()*(((node_cnt-i) as f64 ) + (i as f64)) ) as usize;
+        rand_path.swap(i as usize,j as usize);
     }
     rand_path
 }

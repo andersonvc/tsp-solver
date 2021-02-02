@@ -13,7 +13,7 @@
         display:block;
       }
 
-      .controller {
+      .control-panel {
         display:flex;
 
       }
@@ -31,12 +31,13 @@
     </style>
   </head>
   <body>
-    <div class='controller' id='controller' >
+    <div class='control-panel' id='control-panel' >
       <h2 style="margin-top:0;margin-bottom:0">Travelling Salesman Problem</h2>
       <div>
         <select id='search-type'>
-          <option value=0>Random Search</option>
+          <option value=0>Ant Colony Search</option>
           <option value=1>Greedy Search</option>
+          <option value=2>Random Search</option>
         </select>
       </div>
       <button id='reset-button'>Reset Points</button>

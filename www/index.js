@@ -1,4 +1,4 @@
-import { World, SearchType } from "tsp_solver";
+import { Controller} from "tsp_solver";
 import { memory } from "tsp_solver/tsp_solver_bg";
 //import { ContextReplacementPlugin } from "webpack";
 
@@ -9,12 +9,12 @@ var dist = 2.0;
 
 //const memvals = memory.buffer
 
-var world = null;
+var controller = null;
 var nodes = [];
 var path = [];
-var searchType = SearchType.Greedy;
 
-const controller = document.getElementById('controller');
+
+const controlPanel = document.getElementById('control-panel');
 
 const canvas = document.getElementById('canvas-map');
 canvas.height = window.innerHeight;
@@ -26,54 +26,18 @@ resetButton.addEventListener('click',event=>{
     resetNodes();
 })
 
-const searchSelection = document.getElementById('search-type')
-searchSelection.addEventListener('change',event=>{
-    
-    switch (searchSelection.value) {
-        case '0':
-            searchType=SearchType.Random;
-            break;
-        case '1':
-            searchType=SearchType.Greedy;
-            break;
-    
-    }
-    console.log('bbb',searchType,searchSelection.value)
-    console.log(searchType);
-})
-searchSelection.addEventListener('click',event=>{
-    switch (searchSelection.value){
-        case 0:
-            searchType=SearchType.Greedy;
-            break;
-        case 1:
-            searchType=SearchType.Random;
-            break;
-    }
-})
 
 const resetNodes = () => {
-    world = World.new(nodeCnt,searchType);
+    controller = Controller.new(nodeCnt,document.getElementById("search-type").value);
 }
 
 var counter = 0;
 const renderLoop = () => {
-
+    controller.update();
+    nodes = new Uint32Array(memory.buffer,controller.get_nodes(),nodeCnt*2);
+    path = new Uint32Array(memory.buffer,controller.get_route(),nodeCnt);
     
-    world.update_path()
-    nodes = new Uint8Array(memory.buffer,world.nodes(),world.node_cnt()*2);
-    path = new Uint8Array(memory.buffer,world.path(),nodeCnt);
-    /*
-    counter+=1
-    if (counter<20){
-        //counter = 1
-        console.log(nodes)
-        console.log(path)
-    }
-    */
-    
-
-    document.getElementById('distance_tracker').innerHTML=world.dist();
+    document.getElementById('distance_tracker').innerHTML=controller.get_best_dist();
 
     if (window.innerHeight!=canvas.height || window.innerWidth!=canvas.width){
         canvas.width = window.innerWidth;
@@ -83,14 +47,14 @@ const renderLoop = () => {
     
     const r = Math.min(canvas.height,canvas.width)*0.005
     const x_offset = canvas.width*0.05
-    const y_offset = (canvas.height-controller.offsetHeight)*0.05
+    const y_offset = (canvas.height-controlPanel.offsetHeight)*0.05
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     ctx.beginPath();
     for (const v of Array(nodeCnt).keys()){
         const x = nodes[2*v]*canvas.width/105+x_offset;
-        const y = nodes[2*v+1]*(canvas.height-controller.offsetHeight)/105+y_offset;
+        const y = nodes[2*v+1]*(canvas.height-controlPanel.offsetHeight)/105+y_offset;
         ctx.moveTo(x,y);
         ctx.arc(x,y,r,0,2*Math.PI,false);
         ctx.fillStyle="black";
@@ -104,10 +68,10 @@ const renderLoop = () => {
         curr_node = path[v];
 
         const prev_x = nodes[prev_node*2]*canvas.width/105+x_offset;
-        const prev_y = nodes[prev_node*2+1]*(canvas.height-controller.offsetHeight)/105+y_offset;
+        const prev_y = nodes[prev_node*2+1]*(canvas.height-controlPanel.offsetHeight)/105+y_offset;
         
         const curr_x = nodes[curr_node*2]*canvas.width/105+x_offset;
-        const curr_y = nodes[curr_node*2+1]*(canvas.height-controller.offsetHeight)/105+y_offset;
+        const curr_y = nodes[curr_node*2+1]*(canvas.height-controlPanel.offsetHeight)/105+y_offset;
         
         ctx.moveTo(prev_x,prev_y);
         ctx.lineTo(curr_x,curr_y);
