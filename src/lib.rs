@@ -15,10 +15,10 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 #[wasm_bindgen]
 pub struct Controller {
-    nodes: Vec<(u32,u32)>,
+    nodes: Vec<(u8,u8)>,
     _solver: solver::Solver,
     solver_type: u8,
-    best_route: Vec<u32>,
+    best_route: Vec<u8>,
     best_dist: f32,
     iteration_cnt: u32,
     route_hist:Vec<(u32,f32)>,
@@ -26,10 +26,10 @@ pub struct Controller {
 
 #[wasm_bindgen]
 impl Controller {
-    pub fn new(node_cnt:u32,solver_type:u8)->Controller{
+    pub fn new(node_cnt:u8,solver_type:u8)->Controller{
         let nodes = utils::create_random_nodes(node_cnt);
         let dist_map = utils::compute_dist_hashmap(&nodes);
-        let best_route:Vec<u32> = utils::compute_random_path(node_cnt);
+        let best_route:Vec<u8> = utils::compute_random_path(node_cnt);
         let best_dist:f32 = utils::compute_circuit_dist(&dist_map, &best_route);
         let iteration_cnt:u32 = 0;
         let route_hist:Vec<(u32,f32)> = vec![(iteration_cnt,best_dist)];
@@ -64,11 +64,11 @@ impl Controller {
         }
     }
 
-    pub fn get_nodes(&self)->*const (u32,u32){
+    pub fn get_nodes(&self)->*const (u8,u8){
         self.nodes.as_ptr()
     }
 
-    pub fn get_route(&self)->*const u32{
+    pub fn get_route(&self)->*const u8{
         self.best_route.as_ptr()
     }
 

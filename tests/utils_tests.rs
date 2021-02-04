@@ -7,7 +7,7 @@ use tsp_solver::utils;
 
 #[wasm_bindgen_test]
 fn test_get_aco_selection_likelihood(){
-    let mut nodes:Vec<u32> = vec![1,2,3];
+    let mut nodes:Vec<u8> = vec![1,2,3];
     let pher_weights:Vec<f32> = vec![1.,2.,3.];
     let dist_weights:Vec<f32> = vec![1.,2.,3.];
 
@@ -30,14 +30,14 @@ fn test_get_aco_selection_likelihood(){
 
 #[wasm_bindgen_test]
 fn test_distance_likelihood(){
-    let mut dist_map = HashMap::<(u32,u32),f32>::new();
+    let mut dist_map = HashMap::<(u8,u8),f32>::new();
     dist_map.insert((0,1),1.0);
     dist_map.insert((1,2),2.0);
     dist_map.insert((0,2),3.0);
     dist_map.insert((0,3),4.0);
 
-    let curr_node:u32 = 0;
-    let rem_nodes:Vec<u32> = vec![1,2,3];
+    let curr_node:u8 = 0;
+    let rem_nodes:Vec<u8> = vec![1,2,3];
 
     let res  = utils::get_distance_likelihood(&dist_map,&curr_node,&rem_nodes);
     assert_eq!(res,[1.0,0.33333334,0.25]);
@@ -49,20 +49,20 @@ fn test_distance_likelihood(){
 
 #[wasm_bindgen_test]
 fn test_circuit_dist(){
-    let mut dist_map = HashMap::<(u32,u32),f32>::new();
+    let mut dist_map = HashMap::<(u8,u8),f32>::new();
     dist_map.insert((0,1),1.0);
     dist_map.insert((1,2),2.0);
     dist_map.insert((0,2),3.0);
 
-    let path:Vec<u32> = vec![0,1,2];
+    let path:Vec<u8> = vec![0,1,2];
     let circuit_dist = utils::compute_circuit_dist(&dist_map,&path);
     assert_eq!(circuit_dist,6.0)
 }
 
 #[wasm_bindgen_test]
 fn test_pick_random_node(){
-    let mut v:&mut Vec<u32> = &mut vec![0,1,2,3];
-    let selected:u32 = utils::pick_random_node(&mut v);
+    let mut v:&mut Vec<u8> = &mut vec![0,1,2,3];
+    let selected:u8 = utils::pick_random_node(&mut v);
 
     assert_eq!(v.len(),3);
     for rec in v.iter(){

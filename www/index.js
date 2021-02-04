@@ -47,8 +47,8 @@ var counter = 0;
 const renderLoop = () => {
 
     controller.update();
-    nodes = new Uint32Array(memory.buffer,controller.get_nodes(),nodeCnt*2);
-    path = new Uint32Array(memory.buffer,controller.get_route(),nodeCnt);
+    nodes = new Uint8Array(memory.buffer,controller.get_nodes(),nodeCnt*2);
+    path = new Uint8Array(memory.buffer,controller.get_route(),nodeCnt);
     
     document.getElementById('distance-tracker').innerHTML='Circuit Dist: '+controller.get_best_dist().toFixed(2);
 

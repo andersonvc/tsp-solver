@@ -2,22 +2,31 @@ use crate::utils;
 use std::collections::{HashMap};
 
 pub struct Solver{
-    pub route: Vec<u32>,
-    node_cnt: u32,
-    pub dist_map: HashMap<(u32,u32),f32>,
-    pub pher_map: HashMap<(u32,u32),f32>,
+    pub route: Vec<u8>,
+    node_cnt: u8,
+    pub dist_map: HashMap<(u8,u8),f32>,
+    pub pher_map: HashMap<(u8,u8),f32>,
     alpha: f32,
     beta: f32,
-    ant_cnt: u32,
+    ant_cnt: u8,
     decay_rate:f32,
     seed_rounds:u8,
 }
 
 impl Solver{
-    pub fn new(node_cnt:u32,dist_map:HashMap<(u32,u32),f32>)->Solver{
-        let route:Vec<u32> = utils::compute_random_path(node_cnt);
-        let pher_keys:Vec<(u32,u32)> = dist_map.keys().cloned().collect();
-        let pher_map:HashMap<(u32,u32),f32> = pher_keys.into_iter().map(|x|(x,1.0)).into_iter().collect();
+    pub fn new(node_cnt:u8,dist_map:HashMap<(u8,u8),f32>)->Solver{
+        let route:Vec<u8> = utils::compute_random_path(node_cnt);
+        let pher_keys:Vec<(u8,u8)> = dist_map.keys().cloned().collect();
+        let pher_map:HashMap<(u8,u8),f32> = pher_keys.into_iter().map(|x|(x,1.0)).into_iter().collect();
+
+        let ant_cnt = match node_cnt{
+            50 => 45,
+            75 => 35,
+            100 => 25,
+            150 => 20,
+            _ => 40,
+        };
+ 
 
         Solver {
             route,
@@ -25,8 +34,8 @@ impl Solver{
             dist_map,
             pher_map,
             alpha:1.0,
-            beta:1.4,
-            ant_cnt: 50,
+            beta:1.6,
+            ant_cnt: ant_cnt,
             decay_rate: 0.2,
             seed_rounds:5,
         }
@@ -45,12 +54,12 @@ impl Solver{
     
     pub fn greedy_update(&mut self)->f32{
 
-        let mut remaining_nodes:&mut Vec<u32> = &mut (0..self.node_cnt).collect();
+        let mut remaining_nodes:&mut Vec<u8> = &mut (0..self.node_cnt).collect();
 
         let mut curr_node = utils::pick_random_node(&mut remaining_nodes);
         let mut next_best_node = 0;
         let mut next_best_ix = 0;
-        let mut greedy_path: Vec<u32> = Vec::with_capacity(self.node_cnt as usize);
+        let mut greedy_path: Vec<u8> = Vec::with_capacity(self.node_cnt as usize);
         greedy_path.push(curr_node);
 
         for _ in 0..self.node_cnt-1{
@@ -69,7 +78,7 @@ impl Solver{
                     next_best_ix=i;
                 }
             }
-            greedy_path.push(next_best_node as u32);
+            greedy_path.push(next_best_node as u8);
             remaining_nodes.swap_remove(next_best_ix);
             curr_node = next_best_node;
         }
@@ -88,11 +97,11 @@ impl Solver{
 
         }
 
-        let update_const:f32 = 11111.0;
+        let update_const:f32 = 1111.0;
         
-        let mut ant_tours:Vec<(f32,Vec<u32>)> = (0..self.ant_cnt).map(|_|self.ant_tour()).collect();
+        let mut ant_tours:Vec<(f32,Vec<u8>)> = (0..self.ant_cnt).map(|_|self.ant_tour()).collect();
         ant_tours.sort_by(|a,b| (a.0).partial_cmp(&b.0).unwrap());
-        ant_tours.truncate(25 as usize);
+        ant_tours.truncate((&self.ant_cnt/2) as usize);
         
         let mut curr_best_dist:f32 = std::f32::MAX;
         
@@ -121,13 +130,14 @@ impl Solver{
             let n2 = std::cmp::max(path[0],path[path.len()-1]);
             self.pher_map.insert((n1,n2), self.pher_map[&(n1,n2)]+update_const/dist);
         }
+        
         curr_best_dist
-
+    
     }
 
-    pub fn ant_tour(&self)->(f32,Vec<u32>){
+    pub fn ant_tour(&self)->(f32,Vec<u8>){
 
-        let mut remaining_nodes:&mut Vec<u32> = &mut (0..self.node_cnt).collect();
+        let mut remaining_nodes:&mut Vec<u8> = &mut (0..self.node_cnt).collect();
 
         let mut curr_node = utils::pick_random_node(&mut remaining_nodes);
 
@@ -135,7 +145,7 @@ impl Solver{
         let mut distance_weights = utils::get_distance_likelihood(&self.dist_map, &curr_node, &remaining_nodes);
         let mut cum_distribution = utils::get_aco_selection_likelihood(&pheremone_weights, &distance_weights, self.alpha, self.beta);
 
-        let mut ant_path: Vec<u32> = Vec::with_capacity(self.node_cnt as usize);
+        let mut ant_path: Vec<u8> = Vec::with_capacity(self.node_cnt as usize);
         ant_path.push(curr_node);
 
         while !remaining_nodes.is_empty() {

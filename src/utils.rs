@@ -17,18 +17,18 @@ pub fn get_aco_selection_likelihood(pher_weights:&Vec<f32>,dist_weights:&Vec<f32
 
 }
 
-pub fn get_pheremone_likelihood(pher_map:&HashMap<(u32,u32),f32>, curr_node:&u32, valid_nodes:&Vec<u32>)->Vec<f32>{
+pub fn get_pheremone_likelihood(pher_map:&HashMap<(u8,u8),f32>, curr_node:&u8, valid_nodes:&Vec<u8>)->Vec<f32>{
     let weights = valid_nodes.into_iter().map(|x| *pher_map.get(&(min(*x,*curr_node),max(*x,*curr_node))).unwrap()).collect();
     return weights
 }
 
-pub fn get_distance_likelihood(dist_map:&HashMap<(u32,u32),f32>, curr_node:&u32, valid_nodes:&Vec<u32>)->Vec<f32>{
+pub fn get_distance_likelihood(dist_map:&HashMap<(u8,u8),f32>, curr_node:&u8, valid_nodes:&Vec<u8>)->Vec<f32>{
     let weights = valid_nodes.into_iter().map(|x| 1.0 / *dist_map.get(&(min(*x,*curr_node),max(*x,*curr_node))).unwrap()).collect();
     return weights
 }
 
 
-pub fn pick_probabilistic_node(cum_distrib:&Vec<f32>, nodes:&mut Vec<u32>)->u32{
+pub fn pick_probabilistic_node(cum_distrib:&Vec<f32>, nodes:&mut Vec<u8>)->u8{
     let rand_val = js_sys::Math::random() as f32;
     let mut target_ix:usize = 0;
 
@@ -41,18 +41,18 @@ pub fn pick_probabilistic_node(cum_distrib:&Vec<f32>, nodes:&mut Vec<u32>)->u32{
     nodes.swap_remove(target_ix as usize)
 }
 
-pub fn pick_random_node(nodes:&mut Vec<u32>)->u32{
-    let rand_ix = js_sys::Math::floor(js_sys::Math::random()*(nodes.len() as f64)) as u32;
+pub fn pick_random_node(nodes:&mut Vec<u8>)->u8{
+    let rand_ix = js_sys::Math::floor(js_sys::Math::random()*(nodes.len() as f64)) as u8;
     nodes.swap_remove(rand_ix as usize)
 }
 
-pub fn compute_dist(pt1:(u32,u32),pt2:(u32,u32))->f32{
+pub fn compute_dist(pt1:(u8,u8),pt2:(u8,u8))->f32{
     let (x1,y1) = pt1;
     let (x2,y2) = pt2;
     ((x1 as f32 - x2 as f32).powf(2.)+(y1 as f32 - y2 as f32).powf(2.)).powf(0.5)
 }
 
-pub fn compute_circuit_dist(dist_map:&HashMap<(u32,u32),f32>, path:&Vec<u32>) -> f32 {
+pub fn compute_circuit_dist(dist_map:&HashMap<(u8,u8),f32>, path:&Vec<u8>) -> f32 {
 
     let mut curr_dist:f32 = 0.0;
     for v in 1..path.len() {
@@ -69,34 +69,34 @@ pub fn compute_circuit_dist(dist_map:&HashMap<(u32,u32),f32>, path:&Vec<u32>) ->
     
 }
 
-pub fn create_random_nodes(node_cnt:u32)->Vec<(u32,u32)>{
+pub fn create_random_nodes(node_cnt:u8)->Vec<(u8,u8)>{
     //Create random nodes (x,y) using the javascript random number generator
     //Vector should be immutable
-    let nodes = (0..node_cnt).map(|_| ((js_sys::Math::random()*100.0) as u32,(js_sys::Math::random()*100.0) as u32)).collect();
+    let nodes = (0..node_cnt).map(|_| ((js_sys::Math::random()*100.0) as u8,(js_sys::Math::random()*100.0) as u8)).collect();
     nodes
 }
 
-pub fn compute_dist_hashmap(nodes:&Vec<(u32,u32)>)->HashMap<(u32,u32),f32>{
+pub fn compute_dist_hashmap(nodes:&Vec<(u8,u8)>)->HashMap<(u8,u8),f32>{
     
     //Generate each node->node edge, with lower edge_id preceding
-    let mut edge_ix:Vec<(u32,u32)> = Vec::new();
-    for i in 0..nodes.len() as u32 {
-      for j in i+1..nodes.len() as u32 {
+    let mut edge_ix:Vec<(u8,u8)> = Vec::new();
+    for i in 0..nodes.len() as u8 {
+      for j in i+1..nodes.len() as u8 {
           edge_ix.insert(0,(i,j));
       }
     }
 
     // edge1->edge2: point distance
-    let dist_map:HashMap<(u32,u32),f32> = edge_ix.iter().map(|x| (*x,compute_dist(nodes[x.0 as usize],nodes[x.1 as usize]))).collect();
+    let dist_map:HashMap<(u8,u8),f32> = edge_ix.iter().map(|x| (*x,compute_dist(nodes[x.0 as usize],nodes[x.1 as usize]))).collect();
 
     dist_map
 }
 
-pub fn compute_random_path(node_cnt:u32)-> Vec<u32> {
+pub fn compute_random_path(node_cnt:u8)-> Vec<u8> {
     //Fisher Yates shuffle
-    let mut rand_path: Vec<u32> = Vec::<u32>::with_capacity(node_cnt as usize);
+    let mut rand_path: Vec<u8> = Vec::<u8>::with_capacity(node_cnt as usize);
 
-    for i in 0..node_cnt{rand_path.push(i as u32);}
+    for i in 0..node_cnt{rand_path.push(i as u8);}
 
     for i in 0..node_cnt-1 {
         let j = js_sys::Math::floor(js_sys::Math::random()*(((node_cnt-i) as f64 ) + (i as f64)) ) as usize;
