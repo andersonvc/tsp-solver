@@ -2,10 +2,13 @@ import { Controller} from "tsp_solver";
 import { memory } from "tsp_solver/tsp_solver_bg";
 //import { ContextReplacementPlugin } from "webpack";
 
-//wasm.greet();
 var nodeCnt = 50;
 var points = [];
 var dist = 2.0;
+
+const bottomButtons = document.getElementById('bottom-button');
+bottomButtons.style.right = String(window.innerWidth/2-130)+'px';
+
 
 //const memvals = memory.buffer
 
@@ -14,12 +17,19 @@ var nodes = [];
 var path = [];
 
 
-const controlPanel = document.getElementById('control-panel');
+const controlPanel = document.getElementById('header');
 
 const canvas = document.getElementById('canvas-map');
 canvas.height = window.innerHeight;
 canvas.width = window.innerWidth;
 const ctx = canvas.getContext("2d");
+ctx.fillStyle = "white";
+
+const modalUpdateButton = document.getElementById('modal-update')
+modalUpdateButton.addEventListener('click',event=>{
+    resetNodes();
+
+})
 
 const resetButton = document.getElementById('reset-button')
 resetButton.addEventListener('click',event=>{
@@ -28,28 +38,34 @@ resetButton.addEventListener('click',event=>{
 
 
 const resetNodes = () => {
+    nodeCnt = parseInt(document.getElementById("node-cnt").options[document.getElementById("node-cnt").selectedIndex].text);
+    document.getElementById('header').innerHTML="TSP Simulator: using "+ document.getElementById("search-type").options[parseInt(document.getElementById("search-type").value)].text;
     controller = Controller.new(nodeCnt,document.getElementById("search-type").value);
 }
 
 var counter = 0;
 const renderLoop = () => {
+
     controller.update();
     nodes = new Uint32Array(memory.buffer,controller.get_nodes(),nodeCnt*2);
     path = new Uint32Array(memory.buffer,controller.get_route(),nodeCnt);
     
-    document.getElementById('distance_tracker').innerHTML=controller.get_best_dist();
+    document.getElementById('distance-tracker').innerHTML='Circuit Dist: '+controller.get_best_dist().toFixed(2);
 
     if (window.innerHeight!=canvas.height || window.innerWidth!=canvas.width){
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
+        bottomButtons.style.right = String(window.innerWidth/2-130)+'px';
     }
 
-    
-    const r = Math.min(canvas.height,canvas.width)*0.005
-    const x_offset = canvas.width*0.05
-    const y_offset = (canvas.height-controlPanel.offsetHeight)*0.05
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    const r = Math.min(canvas.height,canvas.width)*0.004
+    const x_offset = canvas.width*0.05
+    const y_offset = (canvas.height-controlPanel.offsetHeight)*0.03
+
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     
     ctx.beginPath();
     for (const v of Array(nodeCnt).keys()){
